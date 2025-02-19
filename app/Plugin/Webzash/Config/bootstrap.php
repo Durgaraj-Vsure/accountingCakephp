@@ -28,10 +28,10 @@
 /**** This file contains common functions used throughout the application ****/
 
 /* Application name and url */
-Configure::write('Webzash.AppName', "Webzash");
+Configure::write('Webzash.AppName', "Accounting");
 Configure::write('Webzash.AppVersion', "3.0");
 Configure::write('Webzash.AppDatabaseVersion', "6");
-Configure::write('Webzash.AppURL', "http://webzash.org");
+Configure::write('Webzash.AppURL', "#");
 
 /* Include curreny functions */
 require_once('currency.php');

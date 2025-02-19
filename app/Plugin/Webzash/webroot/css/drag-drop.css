@@ -1,0 +1,224 @@
+/* Drag-and-Drop Area */
+.drag-drop-area {
+    width: 100%;
+    max-width: 40rem; /* Increase the max width to 640px */
+    padding: 2rem; /* Increased padding */
+    border: 2px dashed #cbd5e0; /* Light gray border */
+    border-radius: 0.5rem; /* Rounded corners */
+    background-color: #f9fafb; /* Light gray background */
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+    margin: 0 auto; /* Center the drop area */
+}
+
+.drag-drop-area:hover {
+    background-color: #f3f4f6; /* Slightly darker gray */
+}
+
+.drag-drop-active {
+    background-color: #e5e7eb; /* Active background */
+    border-color: #93c5fd; /* Blue border */
+}
+
+/* File Details */
+.file-details {
+    margin-top: 1rem; /* 16px */
+    color: #374151; /* Dark gray */
+    font-size: 1rem;
+    text-align: center; /* Center the file list */
+}
+
+/* Remove File Button */
+.remove-file-button {
+    margin-top: 0.5rem; /* 8px */
+    color: #ef4444; /* Red */
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    text-decoration: underline;
+    transition: color 0.3s ease-in-out; /* Smooth transition for color change */
+}
+
+.remove-file-button:hover {
+    color: #b91c1c; /* Darker red on hover */
+    background-color: transparent; /* Ensure no background color is applied */
+    text-decoration: underline; /* Keep the underline on hover */
+}
+
+/* Upload Button */
+.upload-button {
+    margin-top: 1rem; /* Increase space above the button */
+    padding: 0.75rem 2rem; /* Adjust padding */
+    color: #ffffff; /* White text */
+    background-color: #2563eb; /* Blue */
+    border: none;
+    border-radius: 0.25rem; /* Rounded corners */
+    font-size: 1.125rem; /* Larger font size */
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+    margin-bottom: 1rem; /* Add space below button */
+}
+
+.upload-button:hover {
+    background-color: #1d4ed8; /* Darker blue */
+}
+
+.upload-button:disabled {
+    background-color: #cbd5e0; /* Gray */
+    cursor: not-allowed;
+}
+
+/* Centered container for selected file and button */
+.file-upload-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-top: 2rem;
+}
+
+.error-message {
+    margin-top: 0.5rem; /* 8px */
+    color: #ef4444; /* Red */
+    font-size: 0.875rem; /* Small font size */
+}
+/* Container for the file counts cards */
+.file-counts-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    margin-top: 20px;
+    padding: 0 20px;
+    flex-wrap: wrap; /* Allow cards to wrap to the next line on smaller screens */
+}
+
+/* Individual card styles */
+.file-counts-card {
+    flex: 1;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    min-width: 200px; /* Ensure a minimum size for cards */
+    box-sizing: border-box; /* Make sure padding doesn't affect width */
+}
+
+/* Card hover effect */
+.file-counts-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Card titles (Uploads, Processed, Failed) */
+.file-counts-card h4 {
+    font-size: 1.25rem;
+    color: #333;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+/* Count numbers in the card */
+.file-counts-card .count-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+    display: inline-block;
+    animation: countAnimation 1.5s forwards;
+}
+
+/* Animation for count transition */
+@keyframes countAnimation {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Background color for each card */
+.file-counts-card.uploads {
+    background-color: #e8f5e9;
+    border-left: 5px solid #4caf50; /* Green accent for uploads */
+}
+
+.file-counts-card.processed {
+    background-color: #fffde7;
+    border-left: 5px solid #ffeb3b; /* Yellow accent for processed */
+}
+
+.file-counts-card.failed {
+    background-color: #ffebee;
+    border-left: 5px solid #f44336; /* Red accent for failed */
+}
+
+/* Media Queries for Responsiveness */
+
+/* For tablets or smaller screens */
+@media (max-width: 768px) {
+    .file-counts-container {
+        flex-direction: column; /* Stack the cards vertically on smaller screens */
+        align-items: center; /* Center align the cards */
+    }
+
+    .file-counts-card {
+        width: 90%; /* Ensure cards take up full width on smaller screens */
+        margin-bottom: 20px; /* Add space between the stacked cards */
+    }
+}
+
+/* For mobile screens */
+@media (max-width: 480px) {
+    .file-counts-card h4 {
+        font-size: 1rem; /* Reduce font size for titles */
+    }
+
+    .file-counts-card .count-number {
+        font-size: 1.5rem; /* Reduce font size for counts */
+    }
+
+    .file-counts-container {
+        padding: 0 10px; /* Reduce padding on mobile */
+    }
+
+    .file-counts-card {
+        padding: 15px; /* Reduce card padding on mobile */
+    }
+}
+
+/* Custom button style */
+.button-download {
+    background-color: #28a745; /* Green color */
+    color: white;
+    padding: 10px 20px; /* Adjust the padding to your preference */
+    border-radius: 5px; /* Rounded corners */
+    font-size: 16px; /* Font size */
+    font-weight: bold; /* Optional: makes the text bold */
+    border: none; /* Removes any default border */
+    cursor: pointer; /* Pointer cursor on hover */
+    transition: background-color 0.3s ease; /* Smooth transition for hover */
+}
+
+/* Button hover effect */
+.button-download:hover {
+    background-color: #218838; /* Darker green on hover */
+}
+
+/* Button with left margin */
+.button-download.ml-4 {
+    margin-left: 16px; /* Adds left margin (you can adjust this value) */
+}
+.button-download .icon-margin {
+    margin-right: 8px; /* Adjust this value to control space between icon and text */
+}
