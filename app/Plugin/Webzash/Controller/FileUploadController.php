@@ -11,6 +11,8 @@ class FileUploadController extends WebzashAppController {
     public $uses = array(); 
     var $layout = 'default';  
     public $uploadsPath = APP . 'webroot' . DS . 'uploads' . DS . 'sales_files' . DS . 'uploads' . DS;
+    public $processedPath = APP . 'webroot' . DS . 'uploads' . DS . 'sales_files' . DS . 'processed' . DS;
+    public $failedPath = APP . 'webroot' . DS . 'uploads' . DS . 'sales_files' . DS . 'failed' . DS;
     public $masterLedgerPath = APP . 'webroot' . DS . 'uploads' . DS . 'sales_files' . DS . 'master_ledger.xlsx';
 
     public function index() {
@@ -46,7 +48,13 @@ class FileUploadController extends WebzashAppController {
             }
         }
 
-        // Load the Excel data and pass it to the view
+        // Count files in each directory
+        $uploadsCount = $this->countFilesInDirectory($this->uploadsPath);
+        $processedCount = $this->countFilesInDirectory($this->processedPath);
+        $failedCount = $this->countFilesInDirectory($this->failedPath);
+
+        $this->set(compact('uploadsCount', 'processedCount', 'failedCount'));
+
         if (file_exists($this->masterLedgerPath)) {
             $spreadsheet = IOFactory::load($this->masterLedgerPath);
             $sheet = $spreadsheet->getActiveSheet();
@@ -82,6 +90,14 @@ class FileUploadController extends WebzashAppController {
             return $this->redirect(array('action' => 'index')); // Redirect back to the index page
         }
     }
+
+    private function countFilesInDirectory($path) {
+            if (!is_dir($path)) {
+                return 0;
+            }
+            $files = array_diff(scandir($path), array('..', '.'));
+            return count($files);
+        }
     
 
     public function isAuthorized($user) {
