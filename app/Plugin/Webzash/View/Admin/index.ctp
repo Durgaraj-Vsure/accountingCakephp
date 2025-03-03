@@ -25,47 +25,32 @@
  * THE SOFTWARE.
  */
 ?>
-<div class="row">
-	<div class="col-md-4">
-		<div class="settings-container">
-			<div class="settings-title">
-				<?php echo $this->Html->link(__d('webzash', 'Create account'), array('plugin' => 'webzash', 'controller' => 'wzaccounts', 'action' => 'create')); ?>
-			</div>
-			<div class="settings-desc">
-				<?php echo __d('webzash', 'Create a new account '); ?>
-			</div>
-		</div>
-		<div class="settings-container">
-			<div class="settings-title">
-				<?php echo $this->Html->link(__d('webzash', 'Manage accounts'), array('plugin' => 'webzash', 'controller' => 'wzaccounts', 'action' => 'index')); ?>
-			</div>
-			<div class="settings-desc">
-				<?php echo __d('webzash', 'Manage existing accounts '); ?>
-			</div>
-		</div>
-		<div class="settings-container">
-			<div class="settings-title">
-				<?php echo $this->Html->link(__d('webzash', 'Manage users'), array('plugin' => 'webzash', 'controller' => 'wzusers', 'action' => 'index')); ?>
-			</div>
-			<div class="settings-desc">
-				<?php echo __d('webzash', 'Manage users and permissions'); ?>
-			</div>
-		</div>
-		<div class="settings-container">
-			<div class="settings-title">
-				<?php echo $this->Html->link(__d('webzash', 'General settings'), array('plugin' => 'webzash', 'controller' => 'wzsettings', 'action' => 'edit')); ?>
-			</div>
-			<div class="settings-desc">
-				<?php echo __d('webzash', 'General application settings'); ?>
-			</div>
-		</div>
-		<div class="settings-container">
-			<div class="settings-title">
-				<?php echo $this->Html->link(__d('webzash', 'System information'), array('plugin' => 'webzash', 'controller' => 'wzsettings', 'action' => 'sysinfo')); ?>
-			</div>
-			<div class="settings-desc">
-				<?php echo __d('webzash', 'General system information'); ?>
-			</div>
-		</div>
-	</div>
+<?php
+$this->start('css');
+echo $this->Html->css('Webzash.drag-drop'); // The path relative to webroot
+$this->end();
+?>
+<div class="container mt-5">
+    <div class="row g-4">
+        <?php
+        $cards = [
+            ['Create Account', 'Create a new account', ['plugin' => 'webzash', 'controller' => 'wzaccounts', 'action' => 'create'], 'fas fa-user-plus', 'bg-create'],
+            ['Manage Accounts', 'Manage existing accounts', ['plugin' => 'webzash', 'controller' => 'wzaccounts', 'action' => 'index'], 'fas fa-folder-open', 'bg-manage'],
+            ['Manage Users', 'Manage users and permissions', ['plugin' => 'webzash', 'controller' => 'wzusers', 'action' => 'index'], 'fas fa-users', 'bg-users'],
+            ['General Settings', 'General application settings', ['plugin' => 'webzash', 'controller' => 'wzsettings', 'action' => 'edit'], 'fas fa-cogs', 'bg-settings'],
+            ['System Information', 'General system information', ['plugin' => 'webzash', 'controller' => 'wzsettings', 'action' => 'sysinfo'], 'fas fa-info-circle', 'bg-info'],
+        ];
+
+        foreach ($cards as $card) {
+            echo '<div class="col-md-6 d-flex justify-content-center">';
+            echo '<a href="' . $this->Html->url($card[2]) . '" class="webzash-card-btn ' . $card[4] . '">';
+            echo '<i class="' . $card[3] . '"></i>';
+            echo '<h5>' . __d('webzash', $card[0]) . '</h5>';
+            echo '<p>' . __d('webzash', $card[1]) . '</p>';
+            echo '</a>';
+            echo '</div>';
+        }
+        ?>
+    </div>
 </div>
+

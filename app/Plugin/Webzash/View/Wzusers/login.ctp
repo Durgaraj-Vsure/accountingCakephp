@@ -25,42 +25,68 @@
  * THE SOFTWARE.
  */
 ?>
-<div class="wzusers login form">
-<?php
-	if ($first_login) {
-		echo '<div class="alert alert-success alert-dismissible" role="alert">';
-		echo '<button type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>';
-		echo __d('webzash', 'Since this is your first time, you can login with username as "admin" and password as "admin". Please change your password after login.');
-		echo '</div>';
-	} else if ($default_password) {
-		echo '<div class="alert alert-danger alert-dismissible" role="alert">';
-		echo '<button type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>';
-		echo __d('webzash', 'Warning ! Password still not updated for "admin" user. Please change your password after login.');
-		echo '</div>';
-	}
+<div class="container d-flex justify-content-center align-items-center vh-100">
+    <div class="row w-100">
+        <!-- Left Column: Login Form -->
+        <div class="col-md-6">
+            <div class="card shadow-lg p-4" style="max-width: 400px; width: 100%;">
+                <div class="card-body">
+                    <h3 class="text-center mb-4">Login</h3>
+                    <?php
+                        if ($first_login) {
+                            echo '<div class="alert alert-success alert-dismissible fade show" role="alert">';
+                            echo __d('webzash', 'Since this is your first time, you can login with username as "admin" and password as "admin". Please change your password after login.');
+                            echo '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+                            echo '</div>';
+                        } else if ($default_password) {
+                            echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">';
+                            echo __d('webzash', 'Warning! Password still not updated for "admin" user. Please change your password after login.');
+                            echo '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+                            echo '</div>';
+                        }
 
-	echo $this->Form->create('Wzuser', array(
-		'inputDefaults' => array(
-			'div' => 'form-group',
-			'wrapInput' => false,
-			'class' => 'form-control',
-		),
-	));
+                        echo $this->Form->create('Wzuser', array(
+                            'inputDefaults' => array(
+                                'div' => 'form-group',
+                                'wrapInput' => false,
+                                'class' => 'form-control',
+                            ),
+                            'class' => 'needs-validation'
+                        ));
 
-	echo $this->Form->input('username', array('label' => __d('webzash', 'Username')));
-	echo $this->Form->input('password', array('label' => __d('webzash', 'Password')));
+                        echo '<div class="mb-3">';
+                        echo $this->Form->input('username', array('label' => __d('webzash', 'Username'), 'class' => 'form-control'));
+                        echo '</div>';
 
-	echo '<div class="form-group">';
-	echo $this->Form->submit(__d('webzash', 'Login'), array(
-	'div' => false,
-	'class' => 'btn btn-primary'
-	));
-	echo '</div>';
+                        echo '<div class="mb-3">';
+                        echo $this->Form->input('password', array('label' => __d('webzash', 'Password'), 'class' => 'form-control'));
+                        echo '</div>';
 
-	echo $this->Form->end();
+                        echo '<div class="d-grid">';
+                        echo $this->Form->submit(__d('webzash', 'Login'), array(
+                            'div' => false,
+                            'class' => 'btn btn-primary btn-block'
+                        ));
+                        echo '</div>';
 
-	echo $this->Html->link(__d('webzash', 'Register'), array('plugin' => 'webzash', 'controller' => 'wzusers', 'action' => 'register'));
-	echo ' | ';
-	echo $this->Html->link(__d('webzash', 'Forgot Password'), array('plugin' => 'webzash', 'controller' => 'wzusers', 'action' => 'forgot'));
-?>
+                        echo $this->Form->end();
+                    ?>
+                    <div class="text-center mt-3">
+                        <?php
+                            echo $this->Html->link(__d('webzash', 'Register'), array('plugin' => 'webzash', 'controller' => 'wzusers', 'action' => 'register'), array('class' => 'text-decoration-none'));
+                            echo ' | ';
+                            echo $this->Html->link(__d('webzash', 'Forgot Password'), array('plugin' => 'webzash', 'controller' => 'wzusers', 'action' => 'forgot'), array('class' => 'text-decoration-none'));
+                        ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Column: Image -->
+        <div class="col-md-6">
+		<?php echo $this->Html->image('Webzash.login.jpg', ['alt' => 'loginImage', 'height' => '400', 'width' => '400']); ?>
+		
+		</div>
+    </div>
 </div>
+
