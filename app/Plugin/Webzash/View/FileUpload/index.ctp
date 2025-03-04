@@ -10,41 +10,85 @@ $this->end();
 ?>
 
 <div class="container d-flex flex-column align-items-center justify-content-center vh-100">
-    <div class="col-md-6">
-        <?php
-        // Display flash messages (success or error)
-        echo $this->Session->flash('default', array('class' => 'alert alert-info text-center'));
+<div class="col-md-6">
+    <?php
+    // Display flash messages (success or error)
+    echo $this->Session->flash('default', array('class' => 'alert alert-info text-center'));
 
-        // Create the form for uploading a file
-        echo $this->Form->create('FileUpload', array(
-            'type' => 'file',
-            'url' => array('controller' => 'file_upload', 'action' => 'index'),
-            'class' => 'card p-4 shadow-lg text-center'
+    // Create the form for uploading a file
+    echo $this->Form->create('FileUpload', array(
+        'type' => 'file',
+        'url' => array('controller' => 'file_upload', 'action' => 'index'),
+        'class' => 'card p-4 shadow-lg text-center'
+    ));
+    ?>
+
+    <h3 class="mb-3"><?php echo __d('webzash', 'Upload PDF File'); ?></h3>
+
+    <!-- Category select input -->
+    <div class="form-group">
+        <?php
+        echo $this->Form->input('category', array(
+            'type' => 'select',
+            'options' => array(
+                '' => 'Select Category',
+                'sales' => 'Sales',
+                'bank_statement' => 'Bank Statement',
+            ),
+            'label' => 'Select Category',
+            'required' => true
         ));
         ?>
-
-        <h3 class="mb-3"><?php echo __d('webzash', 'Upload PDF File'); ?></h3>
-
-        <div class="form-group">
-            <?php
-            echo $this->Form->input('file', array(
-                'type' => 'file',
-                'label' => false,
-                'class' => 'form-control mb-3',
-                'required' => true
-            ));
-            ?>
-        </div>
-
-        <?php echo $this->Form->end(array('label' => 'Upload File', 'class' => 'btn btn-success w-100')); ?>
-
     </div>
 
-    <div class="col-md-6 text-center mt-3">
-        <a href="<?php echo $this->Html->url(array('controller' => 'file_upload', 'action' => 'download')); ?>" class="btn btn-primary w-100">
-            Download Excel File
-        </a>
+    <!-- File input -->
+    <div class="form-group">
+        <?php
+        echo $this->Form->input('file', array(
+            'type' => 'file',
+            'label' => false,
+            'class' => 'form-control mb-3',
+            'required' => true
+        ));
+        ?>
     </div>
+
+    <?php echo $this->Form->end(array('label' => 'Upload File', 'class' => 'btn btn-success w-100')); ?>
+
+</div>
+
+
+<div class="col-md-6 text-center mt-3">
+    <?php
+    echo $this->Form->create('FileUpload', array(
+        'type' => 'post',
+        'url' => array('controller' => 'file_upload', 'action' => 'download'),
+        'class' => 'card p-4 shadow-lg text-center'
+    ));
+    ?>
+
+    <h3 class="mb-3"><?php echo __d('webzash', 'Select Category for Download'); ?></h3>
+
+    <div class="form-group">
+        <?php
+        echo $this->Form->input('category', array(
+            'type' => 'select',
+            'options' => array(
+                '' => 'Select Category',
+                'sales' => 'Sales',
+                'bank_statement' => 'Bank Statement',
+            ),
+            'label' => 'Select Category',
+            'required' => true
+        ));
+        ?>
+    </div>
+
+    <?php echo $this->Form->button(__('Download File'), array('class' => 'btn btn-primary w-100')); ?>
+
+    <?php echo $this->Form->end(); ?>
+</div>
+
 </div>
 
 <div class="file-counts-container">

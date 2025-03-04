@@ -17,26 +17,43 @@ class FileUploadController extends WebzashAppController {
 
     public function index() {
         $this->set('title_for_layout', __d('webzash', 'File Upload'));
-
+    
         if ($this->request->is('post')) {
+            // Check if the category is selected
+            if (empty($this->request->data['FileUpload']['category'])) {
+                $this->Session->setFlash(__d('webzash', 'Invalid category selected!'), 'default', array('class' => 'alert alert-danger'));
+                return $this->redirect(array('action' => 'index'));
+            }
+    
+            $category = $this->request->data['FileUpload']['category'];
+    
+            // Define the upload path based on the category
+            if ($category == 'sales') {
+                $uploadsPath = APP . 'webroot' . DS . 'uploads' . DS . 'sales_files' . DS . 'uploads' . DS;
+            } elseif ($category == 'bank_statement') {
+                $uploadsPath = APP . 'webroot' . DS . 'uploads' . DS . 'bank_statements' . DS . 'uploads' . DS;
+            } else {
+                $this->Session->setFlash(__d('webzash', 'Invalid category selected!'), 'default', array('class' => 'alert alert-danger'));
+                return $this->redirect(array('action' => 'index'));
+            }
+    
+            // Check if a file has been uploaded
             if (!empty($this->request->data['FileUpload']['file']['name'])) {
-                // File upload logic
                 $file = $this->request->data['FileUpload']['file'];
-
-                // Check if the file is a valid upload
+    
+                // Check if the file is valid
                 if ($file['error'] === UPLOAD_ERR_OK) {
                     // Set the target file path for the uploaded file
-                    $targetFile = $this->uploadsPath . basename($file['name']);
-
-                    // Make sure the uploads directory exists
-                    if (!is_dir($this->uploadsPath)) {
-                        mkdir($this->uploadsPath, 0777, true); 
+                    $targetFile = $uploadsPath . basename($file['name']);
+    
+                    // Ensure the uploads directory exists
+                    if (!is_dir($uploadsPath)) {
+                        mkdir($uploadsPath, 0777, true); 
                     }
-
-                    // Move the uploaded file to the target directory
+    
+                    // Move the uploaded file to the correct directory
                     if (move_uploaded_file($file['tmp_name'], $targetFile)) {
                         $this->Session->setFlash(__d('webzash', 'File has been uploaded successfully!'), 'default', array('class' => 'alert alert-success'));
-                        // $this->masterLedgerPath = $targetFile; // Update the file path for reading
                     } else {
                         $this->Session->setFlash(__d('webzash', 'Failed to upload file! Please try again.'), 'default', array('class' => 'alert alert-danger'));
                     }
@@ -47,14 +64,14 @@ class FileUploadController extends WebzashAppController {
                 $this->Session->setFlash(__d('webzash', 'No file selected!'), 'default', array('class' => 'alert alert-danger'));
             }
         }
-
+    
         // Count files in each directory
         $uploadsCount = $this->countFilesInDirectory($this->uploadsPath);
         $processedCount = $this->countFilesInDirectory($this->processedPath);
         $failedCount = $this->countFilesInDirectory($this->failedPath);
-
+    
         $this->set(compact('uploadsCount', 'processedCount', 'failedCount'));
-
+    
         if (file_exists($this->masterLedgerPath)) {
             $spreadsheet = IOFactory::load($this->masterLedgerPath);
             $sheet = $spreadsheet->getActiveSheet();
@@ -71,10 +88,26 @@ class FileUploadController extends WebzashAppController {
             $this->set('excelData', $rows);
         }
     }
+    
 
     public function download() {
-        // Set the path to the file you want to download
-        $filePath = $this->masterLedgerPath;
+        // Check if the category is selected
+        if (empty($this->request->data['FileUpload']['category'])) {
+            $this->Session->setFlash(__d('webzash', 'Invalid category selected!'), 'default', array('class' => 'alert alert-danger'));
+            return $this->redirect(array('action' => 'index'));
+        }
+    
+        $category = $this->request->data['FileUpload']['category'];
+    
+        // Define the download paths based on the selected category
+        if ($category == 'sales') {
+            $filePath = APP . 'webroot' . DS . 'uploads' . DS . 'sales_files' . DS . 'master_ledger.xlsx'; // Adjust this path to match your file
+        } elseif ($category == 'bank_statement') {
+            $filePath = APP . 'webroot' . DS . 'uploads' . DS . 'bank_statements' . DS . 'master_ledger.xlsx'; // Adjust this path to match your file
+        } else {
+            $this->Session->setFlash(__d('webzash', 'Invalid category selected!'), 'default', array('class' => 'alert alert-danger'));
+            return $this->redirect(array('action' => 'index'));
+        }
     
         // Check if the file exists
         if (file_exists($filePath)) {
@@ -90,6 +123,7 @@ class FileUploadController extends WebzashAppController {
             return $this->redirect(array('action' => 'index')); // Redirect back to the index page
         }
     }
+    
 
     private function countFilesInDirectory($path) {
             if (!is_dir($path)) {
