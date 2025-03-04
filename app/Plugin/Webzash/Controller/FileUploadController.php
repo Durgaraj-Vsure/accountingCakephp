@@ -14,12 +14,15 @@ class FileUploadController extends WebzashAppController {
     public $processedPath = APP . 'webroot' . DS . 'uploads' . DS . 'sales_files' . DS . 'processed' . DS;
     public $failedPath = APP . 'webroot' . DS . 'uploads' . DS . 'sales_files' . DS . 'failed' . DS;
     public $masterLedgerPath = APP . 'webroot' . DS . 'uploads' . DS . 'sales_files' . DS . 'master_ledger.xlsx';
+    public $bankUploadsPath = APP . 'webroot' . DS . 'uploads' . DS . 'bank_statements' . DS . 'uploads' . DS;
+    public $bankProcessedPath = APP . 'webroot' . DS . 'uploads' . DS . 'bank_statements' . DS . 'processed' . DS;
+    public $bankFailedPath = APP . 'webroot' . DS . 'uploads' . DS . 'bank_statements' . DS . 'failed' . DS;
+    public $bankLedgerPath = APP . 'webroot' . DS . 'uploads' . DS . 'bank_statements' . DS . 'master_ledger.xlsx';
 
     public function index() {
         $this->set('title_for_layout', __d('webzash', 'File Upload'));
     
         if ($this->request->is('post')) {
-            // Check if the category is selected
             if (empty($this->request->data['FileUpload']['category'])) {
                 $this->Session->setFlash(__d('webzash', 'Invalid category selected!'), 'default', array('class' => 'alert alert-danger'));
                 return $this->redirect(array('action' => 'index'));
@@ -27,31 +30,30 @@ class FileUploadController extends WebzashAppController {
     
             $category = $this->request->data['FileUpload']['category'];
     
-            // Define the upload path based on the category
-            if ($category == 'sales') {
-                $uploadsPath = APP . 'webroot' . DS . 'uploads' . DS . 'sales_files' . DS . 'uploads' . DS;
-            } elseif ($category == 'bank_statement') {
-                $uploadsPath = APP . 'webroot' . DS . 'uploads' . DS . 'bank_statements' . DS . 'uploads' . DS;
-            } else {
+            // Define the upload path based on category
+            $uploadDirectories = [
+                'sales' => APP . 'webroot' . DS . 'uploads' . DS . 'sales_files' . DS . 'uploads' . DS,
+                'bank_statement' => APP . 'webroot' . DS . 'uploads' . DS . 'bank_statements' . DS . 'uploads' . DS
+            ];
+    
+            if (!isset($uploadDirectories[$category])) {
                 $this->Session->setFlash(__d('webzash', 'Invalid category selected!'), 'default', array('class' => 'alert alert-danger'));
                 return $this->redirect(array('action' => 'index'));
             }
     
-            // Check if a file has been uploaded
+            $uploadsPath = $uploadDirectories[$category];
+    
+            // Check for file upload
             if (!empty($this->request->data['FileUpload']['file']['name'])) {
                 $file = $this->request->data['FileUpload']['file'];
     
-                // Check if the file is valid
                 if ($file['error'] === UPLOAD_ERR_OK) {
-                    // Set the target file path for the uploaded file
                     $targetFile = $uploadsPath . basename($file['name']);
     
-                    // Ensure the uploads directory exists
                     if (!is_dir($uploadsPath)) {
-                        mkdir($uploadsPath, 0777, true); 
+                        mkdir($uploadsPath, 0777, true);
                     }
     
-                    // Move the uploaded file to the correct directory
                     if (move_uploaded_file($file['tmp_name'], $targetFile)) {
                         $this->Session->setFlash(__d('webzash', 'File has been uploaded successfully!'), 'default', array('class' => 'alert alert-success'));
                     } else {
@@ -66,28 +68,56 @@ class FileUploadController extends WebzashAppController {
         }
     
         // Count files in each directory
-        $uploadsCount = $this->countFilesInDirectory($this->uploadsPath);
-        $processedCount = $this->countFilesInDirectory($this->processedPath);
-        $failedCount = $this->countFilesInDirectory($this->failedPath);
+        $salesUploadsCount = $this->countFilesInDirectory($this->uploadsPath);
+        $salesProcessedCount = $this->countFilesInDirectory($this->processedPath);
+        $salesFailedCount = $this->countFilesInDirectory($this->failedPath);
+        $bankUploadsCount = $this->countFilesInDirectory($this->bankUploadsPath);
+        $bankProcessedCount = $this->countFilesInDirectory($this->bankProcessedPath);
+        $bankFailedCount = $this->countFilesInDirectory($this->bankFailedPath);
+    
+        $uploadsCount = $salesUploadsCount + $bankUploadsCount;
+        $processedCount = $salesProcessedCount + $bankProcessedCount;
+        $failedCount = $salesFailedCount + $bankFailedCount;
     
         $this->set(compact('uploadsCount', 'processedCount', 'failedCount'));
     
+        // Load Sales Ledger Excel Data
+        $salesData = [];
         if (file_exists($this->masterLedgerPath)) {
-            $spreadsheet = IOFactory::load($this->masterLedgerPath);
-            $sheet = $spreadsheet->getActiveSheet();
-            $rows = [];
-            foreach ($sheet->getRowIterator() as $row) {
-                $cellIterator = $row->getCellIterator();
-                $cellIterator->setIterateOnlyExistingCells(false);
-                $rowData = [];
-                foreach ($cellIterator as $cell) {
-                    $rowData[] = $cell->getFormattedValue();
-                }
-                $rows[] = $rowData;
-            }
-            $this->set('excelData', $rows);
+            $salesData = $this->loadExcelData($this->masterLedgerPath);
         }
+    
+        // Load Bank Statement Excel Data
+        $bankData = [];
+        if (file_exists($this->bankLedgerPath)) {
+            $bankData = $this->loadExcelData($this->bankLedgerPath);
+        }
+    
+        $this->set(compact('salesData', 'bankData'));
     }
+    
+    /**
+     * Helper function to read an Excel file and return data as an array
+     */
+    private function loadExcelData($filePath) {
+        $spreadsheet = IOFactory::load($filePath);
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = [];
+    
+        foreach ($sheet->getRowIterator() as $row) {
+            $cellIterator = $row->getCellIterator();
+            $cellIterator->setIterateOnlyExistingCells(false);
+            $rowData = [];
+    
+            foreach ($cellIterator as $cell) {
+                $rowData[] = $cell->getFormattedValue();
+            }
+    
+            $rows[] = $rowData;
+        }
+    
+        return $rows;
+    }    
     
 
     public function download() {

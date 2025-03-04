@@ -32,7 +32,7 @@ $this->end();
             'type' => 'select',
             'options' => array(
                 '' => 'Select Category',
-                'sales' => 'Sales',
+                'sales' => 'Sales/Purchase Receipt',
                 'bank_statement' => 'Bank Statement',
             ),
             'label' => 'Select Category',
@@ -75,7 +75,7 @@ $this->end();
             'type' => 'select',
             'options' => array(
                 '' => 'Select Category',
-                'sales' => 'Sales',
+                'sales' => 'Sales/Purchase Receipt',
                 'bank_statement' => 'Bank Statement',
             ),
             'label' => 'Select Category',
@@ -106,23 +106,22 @@ $this->end();
     </div>
 </div>
 <!-- Excel Data Table -->
-<?php if (isset($excelData) && !empty($excelData)): ?>
- 
-<div class="row mt-4">
-    <div class="col-lg-12">
-        <h3 class="text-center">Excel File Data</h3>
-        <div class="table-responsive" style="overflow-x: auto; white-space: nowrap;">
-            <table id="excelTable" class="table table-striped table-bordered nowrap" style="width:100%">
+<!-- Sales Excel Data Table -->
+<?php if (!empty($salesData)): ?>
+    <div class="row mt-4">
+        <h3 class="text-center">Sales/Purchase Receipt Data</h3>
+        <div class="table-responsive">
+            <table id="salesTable" class="table table-striped table-bordered nowrap" style="width:100%">
                 <thead>
                     <tr>
-                        <?php foreach ($excelData[0] as $header): ?>
+                        <?php foreach ($salesData[0] as $header): ?>
                             <th><?php echo h($header); ?></th>
                         <?php endforeach; ?>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($excelData as $key => $row): ?>
-                        <?php if ($key > 0): // Skip header row ?>
+                    <?php foreach ($salesData as $key => $row): ?>
+                        <?php if ($key > 0): ?>
                             <tr>
                                 <?php foreach ($row as $cell): ?>
                                     <td><?php echo h($cell); ?></td>
@@ -134,10 +133,36 @@ $this->end();
             </table>
         </div>
     </div>
-</div>
-
 <?php endif; ?>
 
+<!-- Bank Statement Excel Data Table -->
+<?php if (!empty($bankData)): ?>
+    <div class="row mt-4">
+        <h3 class="text-center">Bank Statement Data</h3>
+        <div class="table-responsive">
+            <table id="bankTable" class="table table-striped table-bordered nowrap" style="width:100%">
+                <thead>
+                    <tr>
+                        <?php foreach ($bankData[0] as $header): ?>
+                            <th><?php echo h($header); ?></th>
+                        <?php endforeach; ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($bankData as $key => $row): ?>
+                        <?php if ($key > 0): ?>
+                            <tr>
+                                <?php foreach ($row as $cell): ?>
+                                    <td><?php echo h($cell); ?></td>
+                                <?php endforeach; ?>
+                            </tr>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+<?php endif; ?>
 <!-- Include DataTables JS and CSS -->
 <?php
 echo $this->Html->css('https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css');
@@ -149,7 +174,7 @@ echo $this->Html->script('https://cdn.datatables.net/1.11.5/js/jquery.dataTables
 <?php
 echo $this->Html->scriptBlock('
 $(document).ready(function() {
-    $("#excelTable").DataTable({
+    $("#salesTable, #bankTable").DataTable({
         "paging": true,        // Enable pagination
         "searching": true,     // Enable search box
         "responsive": true,    // Enable responsive mode
