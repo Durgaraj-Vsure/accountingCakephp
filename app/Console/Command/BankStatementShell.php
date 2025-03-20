@@ -27,7 +27,8 @@ class BankStatementShell extends Shell {
         'Description',
         'Debit',
         'Credit',
-        'Balance'
+        'Balance',
+        'Category',
     ];
 
     public function initialize() {
@@ -184,22 +185,23 @@ class BankStatementShell extends Shell {
     private function formatResponseData($fileName, $responseData) {
         $formattedData = [];
     
-        if (!empty($responseData['bankStatements'])) {
-            foreach ($responseData['bankStatements'] as $bankStatement) {
-                // Check if accountHolderName is an array or string
+        if (!empty($responseData['bank_statements'])) {
+            foreach ($responseData['bank_statements'] as $bankStatement) {
+                // Ensure bank details exist
+                $bankName = $this->cleanValue($bankStatement['bank_name'] ?? '');
+                $accountNumber = $this->cleanValue($bankStatement['account_number'] ?? '');
+                $statementDate = $this->cleanValue($bankStatement['statement_date'] ?? '');
+                $currency = $this->cleanValue($bankStatement['currency'] ?? '');
+    
+                // Handle account holder name if it's an array or string
                 $accountHolderName = '';
-                if (is_array($bankStatement['accountHolderName'])) {
-                    $accountHolderName = implode(' ', $bankStatement['accountHolderName']);  // Join array elements into a string if it's an array
-                } else {
-                    $accountHolderName = $bankStatement['accountHolderName'] ?? '';  // Otherwise, use it as a string
+                if (!empty($bankStatement['account_holder_name'])) {
+                    $accountHolderName = is_array($bankStatement['account_holder_name']) 
+                        ? implode(' ', array_filter($bankStatement['account_holder_name'])) 
+                        : $this->cleanValue($bankStatement['account_holder_name']);
                 }
     
-                $bankName = $bankStatement['bankName'] ?? '';
-                $accountNumber = $bankStatement['accountNumber'] ?? '';
-                $statementDate = $bankStatement['statementDate'] ?? '';
-                $currency = $bankStatement['currency'] ?? '';
-    
-                if (!empty($bankStatement['transactions'])) {
+                if (!empty($bankStatement['transactions']) && is_array($bankStatement['transactions'])) {
                     foreach ($bankStatement['transactions'] as $transaction) {
                         $formattedData[] = [
                             $fileName,
@@ -208,11 +210,12 @@ class BankStatementShell extends Shell {
                             $accountNumber,
                             $statementDate,
                             $currency,
-                            $transaction['date'] ?? '',
-                            $transaction['description'] ?? '',
+                            $this->cleanValue($transaction['date'] ?? ''),
+                            $this->cleanValue($transaction['description'] ?? ''),
                             $this->cleanNumericValue($transaction['debit'] ?? ''),
                             $this->cleanNumericValue($transaction['credit'] ?? ''),
-                            $this->cleanNumericValue($transaction['balance'] ?? '')
+                            $this->cleanNumericValue($transaction['balance'] ?? ''),
+                            $this->cleanValue($transaction['category'] ?? 'Others') // Default category if missing
                         ];
                     }
                 }
@@ -223,19 +226,21 @@ class BankStatementShell extends Shell {
     }
     
     private function cleanValue($value) {
-        if (empty($value) || $value === 'string' || $value === 'null' || $value === null) {
+        if (empty($value) || in_array($value, ['string', 'null', null], true)) {
             return '';
         }
         return trim((string)$value);
     }
     
     private function cleanNumericValue($value) {
-        if (empty($value) || $value === 'string' || $value === 'null' || $value === null) {
+        if (empty($value) || in_array($value, ['string', 'null', null], true)) {
             return '';
         }
+        // Remove commas and ensure it's a valid number
         $numericValue = str_replace(',', '', $value);
-        return is_numeric($numericValue) ? $numericValue : '';
+        return is_numeric($numericValue) ? number_format((float)$numericValue, 3, '.', '') : '';
     }
+    
     private function readMasterLedger() {
         if (!file_exists($this->masterLedgerPath)) {
             return [];
