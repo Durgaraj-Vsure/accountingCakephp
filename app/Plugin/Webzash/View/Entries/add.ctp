@@ -25,7 +25,13 @@
  * THE SOFTWARE.
  */
 ?>
-
+<?php
+// Add this wherever your action buttons or menu items are
+echo $this->Html->link(__d('webzash', 'Import Entries'), 
+    array('plugin' => 'webzash', 'controller' => 'entries', 'action' => 'import', $entrytype['Entrytype']['label']),
+    array('class' => 'btn btn-default')
+);
+?>
 <script type="text/javascript">
 
 $(document).ready(function() {

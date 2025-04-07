@@ -27,7 +27,12 @@
 
 App::uses('WebzashAppController', 'Webzash.Controller');
 App::uses('LedgerTree', 'Webzash.Lib');
+require_once ROOT . '/app/vendor/autoload.php';
 
+
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 /**
  * Webzash Plugin Entries Controller
  *
@@ -460,6 +465,308 @@ class EntriesController extends WebzashAppController {
 		}
 	}
 
+/**
+ * import method
+ *
+ * @param string $entrytypeLabel
+ * @return void
+ */
+public function import($entrytypeLabel = null) {
+    if (!$entrytypeLabel) {
+        $this->Session->setFlash(__d('webzash', 'Entry type not specified.'), 'danger');
+        return $this->redirect(array('plugin' => 'webzash', 'controller' => 'entries', 'action' => 'index'));
+    }
+
+    $entrytype = $this->Entrytype->find('first', array('conditions' => array('Entrytype.label' => $entrytypeLabel)));
+    if (!$entrytype) {
+        $this->Session->setFlash(__d('webzash', 'Entry type not found.'), 'danger');
+        return $this->redirect(array('plugin' => 'webzash', 'controller' => 'entries', 'action' => 'index'));
+    }
+
+    $this->set('entrytype', $entrytype);
+    $this->set('title_for_layout', __d('webzash', 'Import %s Entries', $entrytype['Entrytype']['name']));
+    $this->set('tag_options', $this->Tag->listAll());
+
+    $ledgers = new LedgerTree();
+    $ledgers->Group = &$this->Group;
+    $ledgers->Ledger = &$this->Ledger;
+    $ledgers->current_id = -1;
+    $ledgers->restriction_bankcash = $entrytype['Entrytype']['restriction_bankcash'];
+    $ledgers->build(0);
+    $ledgers->toList($ledgers, -1);
+    $this->set('ledger_options', $ledgers->ledgerList);
+
+    if ($this->request->is('post')) {
+        if (empty($this->request->data['Entry']['import_file']['tmp_name'])) {
+            $this->Session->setFlash(__d('webzash', 'Please select a file to import.'), 'danger');
+            return;
+        }
+
+        $file = $this->request->data['Entry']['import_file']['tmp_name'];
+        $fileExt = pathinfo($this->request->data['Entry']['import_file']['name'], PATHINFO_EXTENSION);
+        if (!in_array(strtolower($fileExt), ['csv', 'xlsx', 'xls'])) {
+            $this->Session->setFlash(__d('webzash', 'Only CSV, XLS or XLSX files are allowed.'), 'danger');
+            return;
+        }
+
+        try {
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
+            $worksheet = $spreadsheet->getActiveSheet();
+            $rows = $worksheet->toArray();
+            array_shift($rows); // remove header
+
+            if (empty($rows)) {
+                $this->Session->setFlash(__d('webzash', 'No data found in the imported file.'), 'danger');
+                return;
+            }
+
+            $imported = 0;
+            $failed = 0;
+
+            foreach ($rows as $row) {
+                if (empty(array_filter($row))) continue;
+
+                $ds = $this->Entry->getDataSource();
+                $ds->begin();
+
+                $entryNumber = $row[0];
+                $entryDate = $row[1];
+                $entryNarration = $row[2];
+                $formattedDate = dateToSql(str_replace('/', '-', $entryDate));
+
+                $entrydata = array(
+                    'Entry' => array(
+                        'entrytype_id' => (int)$entrytype['Entrytype']['id'],
+                        'tag_id' => $this->request->data['Entry']['tag_id'] ?: null,
+                        'narration' => $entryNarration,
+                        'date' => $formattedDate,
+                    )
+                );
+
+                // Entry number logic
+                if ($entrytype['Entrytype']['numbering'] == 1) {
+                    $entrydata['Entry']['number'] = empty($entryNumber) ? $this->Entry->nextNumber($entrytype['Entrytype']['id']) : (int)$entryNumber;
+                } elseif ($entrytype['Entrytype']['numbering'] == 2 && empty($entryNumber)) {
+                    $this->Session->setFlash(__d('webzash', 'Entry number cannot be empty.'), 'danger');
+                    $ds->rollback();
+                    $failed++;
+                    continue;
+                } else {
+                    $entrydata['Entry']['number'] = (int)$entryNumber;
+                }
+
+                $entryItemsData = array();
+                $dr_total = 0;
+                $cr_total = 0;
+                $dc_valid = false;
+
+                for ($i = 3; $i + 2 < count($row); $i += 3) {
+                    $ledger_id = $row[$i];
+                    $dc = strtoupper(trim($row[$i + 1]));
+                    $amount = $row[$i + 2];
+
+                    if (!is_numeric($ledger_id) || !in_array($dc, ['D', 'C']) || !is_numeric($amount) || $amount <= 0) {
+                        continue;
+                    }
+
+                    $ledger = $this->Ledger->findById($ledger_id);
+                    if (!$ledger) {
+                        $this->Session->setFlash(__d('webzash', 'Invalid ledger ID: %s', $ledger_id), 'danger');
+                        $ds->rollback(); $failed++; continue 2;
+                    }
+
+                    // Restriction validations
+                    if ($entrytype['Entrytype']['restriction_bankcash'] == 4 && $ledger['Ledger']['type'] != 1) {
+                        $this->Session->setFlash(__d('webzash', 'Only bank/cash ledgers allowed.'), 'danger');
+                        $ds->rollback(); $failed++; continue 2;
+                    }
+                    if ($entrytype['Entrytype']['restriction_bankcash'] == 5 && $ledger['Ledger']['type'] == 1) {
+                        $this->Session->setFlash(__d('webzash', 'Bank/cash ledgers not allowed.'), 'danger');
+                        $ds->rollback(); $failed++; continue 2;
+                    }
+
+                    if ($entrytype['Entrytype']['restriction_bankcash'] == 2 && $dc == 'D' && $ledger['Ledger']['type'] == 1) $dc_valid = true;
+                    if ($entrytype['Entrytype']['restriction_bankcash'] == 3 && $dc == 'C' && $ledger['Ledger']['type'] == 1) $dc_valid = true;
+
+                    if (countDecimal($amount) > Configure::read('Account.decimal_places')) {
+                        $this->Session->setFlash(__d('webzash', 'Invalid amount for ledger %s', $ledger_id), 'danger');
+                        $ds->rollback(); $failed++; continue 2;
+                    }
+
+                    if ($dc == 'D') $dr_total = calculate($dr_total, $amount, '+');
+                    else $cr_total = calculate($cr_total, $amount, '+');
+
+                    $entryItemsData[] = array('Entryitem' => array(
+                        'dc' => $dc,
+                        'ledger_id' => (int)$ledger_id,
+                        'amount' => (float)$amount
+                    ));
+                }
+
+                if (empty($entryItemsData)) {
+                    $this->Session->setFlash(__d('webzash', 'No valid ledger rows found.'), 'danger');
+                    $ds->rollback(); $failed++; continue;
+                }
+
+                if (in_array($entrytype['Entrytype']['restriction_bankcash'], [2, 3]) && !$dc_valid) {
+                    $this->Session->setFlash(__d('webzash', 'Bank/Cash ledger required on correct side.'), 'danger');
+                    $ds->rollback(); $failed++; continue;
+                }
+
+                if (calculate($dr_total, $cr_total, '!=')) {
+                    $this->Session->setFlash(__d('webzash', 'Dr and Cr totals do not match.'), 'danger');
+                    $ds->rollback(); $failed++; continue;
+                }
+
+                $entrydata['Entry']['dr_total'] = (float)$dr_total;
+                $entrydata['Entry']['cr_total'] = (float)$cr_total;
+
+                $this->Entry->create();
+                if ($this->Entry->save($entrydata)) {
+                    $entry_id = $this->Entry->id;
+                    $success = true;
+
+                    foreach ($entryItemsData as $item) {
+                        $item['Entryitem']['entry_id'] = $entry_id;
+                        $this->Entryitem->create();
+                        if (!$this->Entryitem->save($item)) {
+                            $success = false;
+                            foreach ($this->Entryitem->validationErrors as $field => $msg) {
+                                $this->Session->setFlash(__d('webzash', 'Failed to save entry item: %s', $msg[0]), 'danger');
+                                break;
+                            }
+                            break;
+                        }
+                    }
+
+                    if ($success) {
+                        $ds->commit();
+                        $imported++;
+                    } else {
+                        $ds->rollback(); $failed++;
+                    }
+                } else {
+                    foreach ($this->Entry->validationErrors as $field => $msg) {
+                        $this->Session->setFlash(__d('webzash', 'Failed to save entry: %s', $msg[0]), 'danger');
+                        break;
+                    }
+                    $ds->rollback(); $failed++;
+                }
+            }
+
+            if ($imported) {
+                $msg = __d('webzash', 'Imported %d entries.', $imported);
+                if ($failed) $msg .= ' ' . __d('webzash', '%d failed.', $failed);
+                $this->Session->setFlash($msg, 'success');
+            } else {
+                $this->Session->setFlash(__d('webzash', 'No entries were imported.'), 'danger');
+            }
+
+            return $this->redirect(array('plugin' => 'webzash', 'controller' => 'entries', 'action' => 'index'));
+
+        } catch (Exception $e) {
+            $this->Session->setFlash(__d('webzash', 'Import error: %s', $e->getMessage()), 'danger');
+            return;
+        }
+    }
+}
+
+
+/**
+ * downloadImportTemplate method
+ *
+ * @param string $entrytypeLabel
+ * @return void
+ */
+public function downloadImportTemplate($entrytypeLabel = null) {
+    // Validate entry type
+    if (!$entrytypeLabel) {
+        $this->Session->setFlash(__d('webzash', 'Entry type not specified.'), 'danger');
+        return $this->redirect(array('plugin' => 'webzash', 'controller' => 'entries', 'action' => 'index'));
+    }
+
+    $entrytype = $this->Entrytype->find('first', array(
+        'conditions' => array('Entrytype.label' => $entrytypeLabel)
+    ));
+
+    if (!$entrytype) {
+        $this->Session->setFlash(__d('webzash', 'Entry type not found.'), 'danger');
+        return $this->redirect(array('plugin' => 'webzash', 'controller' => 'entries', 'action' => 'index'));
+    }
+
+    // Load ledger list
+    $ledgers = new LedgerTree();
+    $ledgers->Group = &$this->Group;
+    $ledgers->Ledger = &$this->Ledger;
+    $ledgers->current_id = -1;
+    $ledgers->restriction_bankcash = $entrytype['Entrytype']['restriction_bankcash'];
+    $ledgers->build(0);
+    $ledgers->toList($ledgers, -1);
+
+    // Build spreadsheet
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $spreadsheet->getProperties()->setCreator('Webzash')
+        ->setTitle('Entry Import Template')
+        ->setSubject('Entry Import Template')
+        ->setDescription('Template for importing entries into Webzash');
+
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setCellValue('A1', 'Entry Number');
+    $sheet->setCellValue('B1', 'Date (DD/MM/YYYY)');
+    $sheet->setCellValue('C1', 'Narration');
+    $sheet->setCellValue('D1', 'Ledger ID');
+    $sheet->setCellValue('E1', 'Dr/Cr (D or C)');
+    $sheet->setCellValue('F1', 'Amount');
+    $sheet->setCellValue('G1', 'Ledger ID');
+    $sheet->setCellValue('H1', 'Dr/Cr (D or C)');
+    $sheet->setCellValue('I1', 'Amount');
+    $sheet->setCellValue('B2', date('d/m/Y'));
+    $sheet->setCellValue('C2', 'Sample narration');
+    $sheet->setCellValue('E2', 'D');
+    $sheet->setCellValue('F2', '0.00');
+    $sheet->setCellValue('H2', 'C');
+    $sheet->setCellValue('I2', '0.00');
+
+    // Second sheet - ledger references
+    $ledgerSheet = $spreadsheet->createSheet();
+    $ledgerSheet->setTitle('Ledger Reference');
+    $ledgerSheet->setCellValue('A1', 'Ledger ID');
+    $ledgerSheet->setCellValue('B1', 'Ledger Name');
+    $row = 2;
+    foreach ($ledgers->ledgerList as $id => $name) {
+        $ledgerSheet->setCellValue('A' . $row, $id);
+        $ledgerSheet->setCellValue('B' . $row, strip_tags($name));
+        $row++;
+    }
+
+    // Auto-size columns
+    foreach (range('A', 'I') as $col) {
+        $sheet->getColumnDimension($col)->setAutoSize(true);
+    }
+    $ledgerSheet->getColumnDimension('A')->setAutoSize(true);
+    $ledgerSheet->getColumnDimension('B')->setAutoSize(true);
+
+    // Output headers and download
+    $filename = 'AccountingImportTemplate-' . $entrytype['Entrytype']['name'] . '.xlsx';
+
+    // Turn off rendering and clear any buffer
+    $this->autoRender = false;
+    Configure::write('debug', 0); // Important for binary download in CakePHP
+
+    if (ob_get_level()) {
+        ob_end_clean(); // Remove any prior output
+    }
+
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment;filename="' . $filename . '"');
+    header('Cache-Control: max-age=0');
+    header('Expires: 0');
+    header('Pragma: public');
+
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+    $writer->save('php://output');
+    exit;
+}
 
 /**
  * edit method
