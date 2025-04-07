@@ -48,11 +48,11 @@
                     <?php echo $this->Form->input('import_file', array('type' => 'file', 'label' => __d('webzash', 'Select File (.xls, .xlsx, .csv)'))); ?>
                     <?php echo $this->Form->input('tag_id', array('type' => 'select', 'options' => $tag_options, 'label' => __d('webzash', 'Tag (optional)'))); ?>
                     
-                    <div class="alert alert-info">
+                    <div class="alert alert-warning">
                         <h4><?php echo __d('webzash', 'Instructions'); ?></h4>
                         <ol>
                             <li><?php echo __d('webzash', 'Download the template file and fill in your entries'); ?></li>
-                            <li><?php echo __d('webzash', 'Format: Entry Number, Date (DD/MM/YYYY), Narration, followed by entries as Ledger ID, Dr/Cr, Amount (groups of 3)'); ?></li>
+                            <li><?php echo __d('webzash', 'Format: Entry Number, Date (DD/MM/YYYY), Narration, followed by entries as Ledger Name, Dr/Cr, Amount (groups of 3)'); ?></li>
                             <li><?php echo __d('webzash', 'Each row represents one entry'); ?></li>
                             <li><?php echo __d('webzash', 'For each entry, the Dr and Cr totals must match'); ?></li>
                             <li><?php echo __d('webzash', 'Do not modify the header row'); ?></li>

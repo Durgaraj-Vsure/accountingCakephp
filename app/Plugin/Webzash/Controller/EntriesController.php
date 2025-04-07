@@ -561,7 +561,19 @@ public function import($entrytypeLabel = null) {
                 $dc_valid = false;
 
                 for ($i = 3; $i + 2 < count($row); $i += 3) {
-                    $ledger_id = $row[$i];
+                    $ledgerName = trim($row[$i]);
+					$ledger = $this->Ledger->find('first', array(
+						'conditions' => array('Ledger.name' => $ledgerName),
+						'recursive' => -1
+					));
+
+					if (!$ledger) {
+						$this->Session->setFlash(__d('webzash', 'Invalid ledger name: %s', $ledgerName), 'danger');
+						$ds->rollback(); $failed++; continue 2;
+					}
+
+					$ledger_id = $ledger['Ledger']['id'];
+
                     $dc = strtoupper(trim($row[$i + 1]));
                     $amount = $row[$i + 2];
 
@@ -711,31 +723,37 @@ public function downloadImportTemplate($entrytypeLabel = null) {
         ->setDescription('Template for importing entries into Webzash');
 
     $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('Import Template');
     $sheet->setCellValue('A1', 'Entry Number');
     $sheet->setCellValue('B1', 'Date (DD/MM/YYYY)');
     $sheet->setCellValue('C1', 'Narration');
-    $sheet->setCellValue('D1', 'Ledger ID');
+    $sheet->setCellValue('D1', 'Ledger Name');
     $sheet->setCellValue('E1', 'Dr/Cr (D or C)');
     $sheet->setCellValue('F1', 'Amount');
-    $sheet->setCellValue('G1', 'Ledger ID');
+    $sheet->setCellValue('G1', 'Ledger Name');
     $sheet->setCellValue('H1', 'Dr/Cr (D or C)');
     $sheet->setCellValue('I1', 'Amount');
+
+    // Sample data row
+    $sheet->setCellValue('A2', '1001');
     $sheet->setCellValue('B2', date('d/m/Y'));
     $sheet->setCellValue('C2', 'Sample narration');
+    $sheet->setCellValue('D2', 'Cash');
     $sheet->setCellValue('E2', 'D');
-    $sheet->setCellValue('F2', '0.00');
+    $sheet->setCellValue('F2', '1000.00');
+    $sheet->setCellValue('G2', 'Sales Account');
     $sheet->setCellValue('H2', 'C');
-    $sheet->setCellValue('I2', '0.00');
+    $sheet->setCellValue('I2', '1000.00');
 
     // Second sheet - ledger references
     $ledgerSheet = $spreadsheet->createSheet();
     $ledgerSheet->setTitle('Ledger Reference');
-    $ledgerSheet->setCellValue('A1', 'Ledger ID');
-    $ledgerSheet->setCellValue('B1', 'Ledger Name');
+    $ledgerSheet->setCellValue('A1', 'Ledger Name');
+    $ledgerSheet->setCellValue('B1', 'Ledger ID');
     $row = 2;
     foreach ($ledgers->ledgerList as $id => $name) {
-        $ledgerSheet->setCellValue('A' . $row, $id);
-        $ledgerSheet->setCellValue('B' . $row, strip_tags($name));
+        $ledgerSheet->setCellValue('A' . $row, strip_tags($name));
+        $ledgerSheet->setCellValue('B' . $row, $id);
         $row++;
     }
 
@@ -767,6 +785,7 @@ public function downloadImportTemplate($entrytypeLabel = null) {
     $writer->save('php://output');
     exit;
 }
+
 
 /**
  * edit method
